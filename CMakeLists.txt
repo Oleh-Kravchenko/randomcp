@@ -1,3 +1,13 @@
-project(randomcp)
+PROJECT(randomcp)
 
-add_executable(randomcp main.c)
+ADD_DEFINITIONS(-pedantic)
+
+ADD_EXECUTABLE(randomcp
+	main.c
+	fcopy.c
+	fcopy.h
+	conf.c
+	conf.h
+	re.c
+	re.h
+)
