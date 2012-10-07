@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include <libgen.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -24,57 +25,53 @@ conf_t conf;
 
 file_info_t *fi = NULL;
 size_t fi_cnt = 0;
+size_t fi_size = 0;
 
 /*------------------------------------------------------------------------*/
 
-void scan_dir(const char* path)
+void scan_directory(const char* path)
 {
-	DIR *src;
-	struct dirent *ent;
-	char new_path[0x100];
+	struct dirent *item;
 	struct stat st;
+	char s[0x100];
+	DIR *dir;
 	
-	if(!(src = opendir(path)))
-	{
-		perror(path);
+	if(!(dir = opendir(path)))
 		return;
-	}
 
-	while(ent = readdir(src))
+	while(item = readdir(dir))
 	{
-		if(!strcmp(ent->d_name, "."))
-			continue;
-
-		if(!strcmp(ent->d_name, ".."))
-			continue;
-
-		if(ent->d_type == DT_REG)
+		if(item->d_type == DT_REG)
 		{
-			snprintf(new_path, sizeof(new_path), "%s%s", path, ent->d_name);
+			snprintf(s, sizeof(s), "%s%s", path, item->d_name);
 
-			if(!stat(new_path, &st))
-			{
-				fi = realloc(fi, sizeof(file_info_t) * (fi_cnt + 1));
+			if(stat(s, &st))
+				continue;
 
-				strncpy(fi[fi_cnt].file, new_path, sizeof(fi[fi_cnt].file) - 1);
-				fi[fi_cnt].file[sizeof(fi[fi_cnt].file) - 1] = 0;
+			fi = realloc(fi, sizeof(file_info_t) * (fi_cnt + 1));
 
-				fi[fi_cnt].size = st.st_size;
+			strncpy(fi[fi_cnt].file, s, sizeof(fi[fi_cnt].file) - 1);
+			fi[fi_cnt].file[sizeof(fi[fi_cnt].file) - 1] = 0;
 
-				++ fi_cnt;
-			}
-			else
-				perror(new_path);
+			fi[fi_cnt].size = st.st_size;
+
+			++ fi_cnt;
 		}
-		else if(ent->d_type == DT_DIR)
+		else if(item->d_type == DT_DIR)
 		{
-			snprintf(new_path, sizeof(new_path), "%s%s/", path, ent->d_name);
+			if(!strcmp(item->d_name, "."))
+				continue;
 
-			scan_dir(new_path);
+			if(!strcmp(item->d_name, ".."))
+				continue;
+
+			snprintf(s, sizeof(s), "%s%s/", path, item->d_name);
+
+			scan_directory(s);
 		}
 	}
 
-	closedir(src);
+	closedir(dir);
 }
 
 /*------------------------------------------------------------------------*/
@@ -83,6 +80,7 @@ int main(int argc, char **argv)
 {
 	off_t total_size;
 	size_t i, j;
+	char s[0x100], path[0x100];
 
 	if(conf_parse_cmdline(argc, argv, &conf))
 	{
@@ -91,8 +89,9 @@ int main(int argc, char **argv)
 		return(1);
 	}
 
-	scan_dir(conf.src_path);
+	scan_directory(conf.src_path);
 
+	/* initialize random generator */
 	srand(time(NULL));
 
 	total_size = 0;
@@ -106,7 +105,12 @@ int main(int argc, char **argv)
 		if(total_size > conf.dst_size)
 			continue;
 
-		puts(fi[j].file);
+		strncpy(s, fi[j].file, sizeof(s) - 1);
+		s[sizeof(s) - 1] = 0;
+
+		snprintf(path, sizeof(path), "%s%s", conf.dst_path, basename(s));
+
+		printf("%s = %d\n", fi[j].file, fcopy(fi[j].file, path));
 	}
 
 	free(fi);
