@@ -106,5 +106,18 @@ int conf_parse_cmdline(int argc, char **argv, conf_t* conf)
 	if(!conf->src_path[0] || !conf->dst_path[0] || !conf->dst_size)
 		return(-1);
 
+	/* add slash if need */
+	if(conf->src_path[strlen(conf->src_path) - 1] != '/')
+	{
+		strncat(conf->src_path, "/", sizeof(conf->src_path) - 1);
+		conf->src_path[sizeof(conf->src_path) - 1] = 0;
+	}
+
+	if(conf->dst_path[strlen(conf->dst_path) - 1] != '/')
+	{
+		strncat(conf->dst_path, "/", sizeof(conf->dst_path) - 1);
+		conf->dst_path[sizeof(conf->dst_path) - 1] = 0;
+	}
+
 	return(0);
 }

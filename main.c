@@ -17,7 +17,17 @@ typedef struct file_info_s
 	off_t size;
 } file_info_t;
 
-const char usage[] = "-s SOURCE_DIR -d DEST_DIR -m MAX_DEST_DIR";
+const char license[] =
+	"randomcp Copyright (C) 2012 Oleh Kravchenko\n"
+	"This program comes with ABSOLUTELY NO WARRANTY\n"
+	"This is free software, and you are welcome to redistribute it "
+	"under certain conditions\n";
+
+const char usage[] =
+	"-s SOURCE_DIR -d DEST_DIR -m MAX_DEST_DIR\n"
+	"-s - source directoty\n"
+	"-d - destination directory\n"
+	"-m - maximum size of destination directory\n";
 
 /*------------------------------------------------------------------------*/
 
@@ -82,12 +92,16 @@ int main(int argc, char **argv)
 	size_t i, j;
 	char s[0x100], path[0x100];
 
+	puts(license);
+
 	if(conf_parse_cmdline(argc, argv, &conf))
 	{
-		puts(usage);
+		printf("Usage:\n%s %s\n", argv[0], usage);
 
 		return(1);
 	}
+
+	/* TODO: code cleanup */
 
 	scan_directory(conf.src_path);
 
@@ -110,7 +124,7 @@ int main(int argc, char **argv)
 
 		snprintf(path, sizeof(path), "%s%s", conf.dst_path, basename(s));
 
-		printf("%s = %d\n", fi[j].file, fcopy(fi[j].file, path));
+		printf("%s\t- %s\n", fcopy(fi[j].file, path) ? "Failed" : "Successful", fi[j].file);
 	}
 
 	free(fi);

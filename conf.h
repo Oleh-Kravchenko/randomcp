@@ -27,8 +27,6 @@ typedef struct conf_s
 	char dst_path[0x100];
 
 	off_t dst_size;
-
-	size_t cp_buf_len;
 } conf_t;
 
 /*------------------------------------------------------------------------*/
