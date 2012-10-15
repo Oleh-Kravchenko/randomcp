@@ -10,12 +10,22 @@
 
 /*------------------------------------------------------------------------*/
 
-typedef struct file_info_s
+typedef struct file_item_s
 {
 	char file[0x100];
 
 	off_t size;
-} file_info_t;
+} file_item_t;
+
+/*------------------------------------------------------------------------*/
+
+file_item_t *files_list = NULL;
+
+size_t files_list_cnt = 0;
+
+conf_t conf;
+
+/*------------------------------------------------------------------------*/
 
 const char license[] =
 	"randomcp Copyright (C) 2012 Oleh Kravchenko\n"
@@ -31,16 +41,9 @@ const char usage[] =
 
 /*------------------------------------------------------------------------*/
 
-conf_t conf;
-
-file_info_t *fi = NULL;
-size_t fi_cnt = 0;
-size_t fi_size = 0;
-
-/*------------------------------------------------------------------------*/
-
 void scan_directory(const char* path)
 {
+	file_item_t *files_list_new;
 	struct dirent *item;
 	struct stat st;
 	char s[0x100];
@@ -51,22 +54,29 @@ void scan_directory(const char* path)
 
 	while(item = readdir(dir))
 	{
+		/* file */
 		if(item->d_type == DT_REG)
 		{
 			snprintf(s, sizeof(s), "%s%s", path, item->d_name);
 
+			/* file size */
 			if(stat(s, &st))
 				continue;
 
-			fi = realloc(fi, sizeof(file_info_t) * (fi_cnt + 1));
+			if(!(files_list_new = realloc(files_list, sizeof(file_item_t) * (files_list_cnt + 1))))
+				goto err;
 
-			strncpy(fi[fi_cnt].file, s, sizeof(fi[fi_cnt].file) - 1);
-			fi[fi_cnt].file[sizeof(fi[fi_cnt].file) - 1] = 0;
+			files_list = files_list_new;
 
-			fi[fi_cnt].size = st.st_size;
+			/* adding new file info */
+			strncpy(files_list[files_list_cnt].file, s, sizeof(files_list[files_list_cnt].file) - 1);
+			files_list[files_list_cnt].file[sizeof(files_list[files_list_cnt].file) - 1] = 0;
 
-			++ fi_cnt;
+			files_list[files_list_cnt].size = st.st_size;
+
+			++ files_list_cnt;
 		}
+		/* directory */
 		else if(item->d_type == DT_DIR)
 		{
 			if(!strcmp(item->d_name, "."))
@@ -77,10 +87,12 @@ void scan_directory(const char* path)
 
 			snprintf(s, sizeof(s), "%s%s/", path, item->d_name);
 
+			/* recursive call */
 			scan_directory(s);
 		}
 	}
 
+err:
 	closedir(dir);
 }
 
@@ -88,9 +100,9 @@ void scan_directory(const char* path)
 
 int main(int argc, char **argv)
 {
-	off_t total_size;
-	size_t i, j;
 	char s[0x100], path[0x100];
+	off_t total_size;
+	size_t i;
 
 	puts(license);
 
@@ -101,8 +113,6 @@ int main(int argc, char **argv)
 		return(1);
 	}
 
-	/* TODO: code cleanup */
-
 	scan_directory(conf.src_path);
 
 	/* initialize random generator */
@@ -110,24 +120,32 @@ int main(int argc, char **argv)
 
 	total_size = 0;
 
-	for(i = 0; i < fi_cnt && total_size < conf.dst_size; ++ i)
+	while(files_list_cnt && total_size < conf.dst_size)
 	{
-		j = rand() % fi_cnt;
+		i = rand() % files_list_cnt;
 
-		total_size += fi[j].size;
+		total_size += files_list[i].size;
 
 		if(total_size > conf.dst_size)
 			continue;
 
-		strncpy(s, fi[j].file, sizeof(s) - 1);
+		/* file name for destination */
+		strncpy(s, files_list[i].file, sizeof(s) - 1);
 		s[sizeof(s) - 1] = 0;
 
 		snprintf(path, sizeof(path), "%s%s", conf.dst_path, basename(s));
 
-		printf("%s\t- %s\n", fcopy(fi[j].file, path) ? "Failed" : "Successful", fi[j].file);
+		/* coping file */
+		printf("%s\t- %s\n", fcopy(files_list[i].file, path) ? "Failed" : "Successful", files_list[i].file);
+
+		/* removing file info from the list */
+		if(files_list_cnt > 1)
+			memmove(files_list + i, files_list + i + 1, files_list_cnt - 1);
+
+		-- files_list_cnt;
 	}
 
-	free(fi);
+	free(files_list);
 
 	return(0);
 }
