@@ -7,6 +7,7 @@
 #include <sys/types.h>
 
 #include "conf.h"
+#include "fcopy.h"
 
 /*------------------------------------------------------------------------*/
 
@@ -28,16 +29,21 @@ conf_t conf;
 /*------------------------------------------------------------------------*/
 
 const char license[] =
-	"randomcp Copyright (C) 2012 Oleh Kravchenko\n"
+	"randomcp  Copyright (C) 2012  Oleh Kravchenko\n"
 	"This program comes with ABSOLUTELY NO WARRANTY\n"
 	"This is free software, and you are welcome to redistribute it "
 	"under certain conditions\n";
 
 const char usage[] =
-	"-s SOURCE_DIR -d DEST_DIR -m MAX_DEST_DIR\n"
+	"-s SOURCE_DIR -d DEST_DIR -m MAX_DEST_DIR_SIZE[kKmMgG]\n"
+	"\n"
 	"-s - source directoty\n"
 	"-d - destination directory\n"
-	"-m - maximum size of destination directory\n";
+	"-m - maximum size of destination directory in bytes\n\n"
+	"Examples:\n"
+	"randomcp -s /home/user/music/ -d /media/mp3/ -m1000\n"
+	"randomcp -s /home/user/music/ -d /media/mp3/ -m1g\n"
+	"randomcp -s /home/user/music/ -d /media/mp3/ -m1G";
 
 /*------------------------------------------------------------------------*/
 
@@ -120,14 +126,14 @@ int main(int argc, char **argv)
 
 	total_size = 0;
 
-	while(files_list_cnt && total_size < conf.dst_size)
+	while(files_list_cnt > 0)
 	{
 		i = rand() % files_list_cnt;
 
 		total_size += files_list[i].size;
 
 		if(total_size > conf.dst_size)
-			continue;
+			break;
 
 		/* file name for destination */
 		strncpy(s, files_list[i].file, sizeof(s) - 1);
@@ -140,7 +146,7 @@ int main(int argc, char **argv)
 
 		/* removing file info from the list */
 		if(files_list_cnt > 1)
-			memmove(files_list + i, files_list + i + 1, files_list_cnt - 1);
+			memmove(files_list + i, files_list + i + 1, sizeof(file_item_t) * (files_list_cnt - i - 1));
 
 		-- files_list_cnt;
 	}

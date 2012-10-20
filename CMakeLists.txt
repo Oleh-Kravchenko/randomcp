@@ -1,6 +1,6 @@
 PROJECT(randomcp)
 
-ADD_DEFINITIONS(-pedantic)
+ADD_DEFINITIONS(-pedantic -std=gnu99)
 
 ADD_EXECUTABLE(randomcp
 	main.c
