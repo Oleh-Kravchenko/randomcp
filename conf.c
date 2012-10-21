@@ -68,6 +68,8 @@ off_t filesize_atoi(const char* s)
 			break;
 	}
 
+	free(pmatch);
+
 	return(result);
 }
 

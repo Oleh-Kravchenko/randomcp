@@ -5,6 +5,7 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
 
 #include "conf.h"
 #include "fcopy.h"
